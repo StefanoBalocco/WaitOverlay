@@ -53,8 +53,8 @@ const el = document.getElementById( "my-form" );
 overlay.Show( { text: { enabled: true, value: "Saving..." } }, el );
 ```
 
-- **`options`** (`Partial<Settings>`, optional): Overrides for the overlay that is being shown. Additional options are ignored while the overlay is already visible.
-- **`container`** (`Element`, optional): Target element. Defaults to `document.body`.
+- **`options`** (`DeepPartial<Settings>`, optional): Overrides for the overlay that is being shown. Additional options are ignored while the overlay is already visible.
+- **`container`** (`Element`, optional): Target element. Defaults to `document.body`. When targeting a specific element, make sure it has a non-static CSS `position` (e.g. `relative`), otherwise the overlay will not be positioned correctly.
 
 #### `Hide( force?, container? )`
 
@@ -136,7 +136,7 @@ overlay.Configure( {
 } );
 ```
 
-- **`settings`** (`Partial<Settings>`): Any subset of the settings object (see [Settings](#settings) below).
+- **`settings`** (`DeepPartial<Settings>`): Any subset of the settings object (see [Settings](#settings) below).
 
 ---
 

@@ -35,7 +35,7 @@ export default class WaitOverlay {
         const element = document.createElement("div");
         element.className = "waitoverlay_element";
         element.style.order = String(order);
-        WaitOverlay._applyCss(element, WaitOverlay._css.element);
+        WaitOverlay._applyCss(element, WaitOverlay._css._element);
         element.dataset.autoresize = autoResize ? "1" : "0";
         element.dataset.resizefactor = String(resizeFactor);
         overlay.appendChild(element);
@@ -116,12 +116,12 @@ export default class WaitOverlay {
         fade: [400, 200],
         zIndex: 2147483647
     };
-    static _validSizes = /^(0*(?:\.\d*[1-9]\d*|[1-9]\d*(?:\.\d+)?))(vm[ai]x|r?em|in|p[tcx]|v[hw]|[cm]m|%)$/;
+    static _validSizes = /^(0*(?:\.\d*[1-9]\d*|[1-9]\d*(?:\.\d+)?))(vm[ai]x|r?em|in|p[tcx]|v[hw]|[cm]m)$/;
     static _validCSSTime = /^(?:\d+)(?:\.\d+)?(?:ms|s)$/;
     static _validCSSAnimations = ["rotate_right", "rotate_left", "fadein", "pulse"];
     static _validProgressPositions = ["top", "bottom"];
     static _css = {
-        overlay: {
+        _overlay: {
             "box-sizing": "border-box",
             "position": "relative",
             "display": "flex",
@@ -129,7 +129,7 @@ export default class WaitOverlay {
             "align-items": "center",
             "justify-content": "space-around"
         },
-        element: {
+        _element: {
             "box-sizing": "border-box",
             "overflow": "visible",
             "flex": "0 0 auto",
@@ -137,27 +137,27 @@ export default class WaitOverlay {
             "justify-content": "center",
             "align-items": "center"
         },
-        svg: {
+        _svg: {
             "width": "100%",
             "height": "100%"
         },
-        progressBar: {
+        _progressBar: {
             "position": "absolute",
             "left": "0"
         },
-        progressFixed: {
+        _progressFixed: {
             "position": "absolute",
             "left": "0",
             "width": "100%"
         },
-        progressBarWrapper: {
+        _progressBarWrapper: {
             "position": "absolute",
             "top": "0",
             "left": "0",
             "width": "100%",
             "height": "100%"
         },
-        fixedPositioning: {
+        _fixedPositioning: {
             "position": "fixed",
             "top": "0",
             "left": "0",
@@ -202,39 +202,39 @@ export default class WaitOverlay {
     Show(options, container) {
         const target = container || document.body;
         const state = this._getState(target, options);
-        state.showCount++;
-        if (!state.overlayElement) {
+        state._showCount++;
+        if (!state._overlay) {
             const overlay = document.createElement("div");
             overlay.className = "waitoverlay";
-            WaitOverlay._applyCss(overlay, WaitOverlay._css.overlay);
-            overlay.style.flexDirection = ("row" === state.settings.direction.toLowerCase() ? "row" : "column");
-            if (state.settings.backgroundClass) {
-                overlay.classList.add(state.settings.backgroundClass);
+            WaitOverlay._applyCss(overlay, WaitOverlay._css._overlay);
+            overlay.style.flexDirection = ("row" === state._settings.direction.toLowerCase() ? "row" : "column");
+            if (state._settings.backgroundClass) {
+                overlay.classList.add(state._settings.backgroundClass);
             }
             else {
-                overlay.style.background = state.settings.background;
+                overlay.style.background = state._settings.background;
             }
-            if (state.wholePage) {
-                WaitOverlay._applyCss(overlay, WaitOverlay._css.fixedPositioning);
+            if (state._wholePage) {
+                WaitOverlay._applyCss(overlay, WaitOverlay._css._fixedPositioning);
             }
-            if (undefined !== state.settings.zIndex) {
-                overlay.style.zIndex = String(state.settings.zIndex);
+            if (undefined !== state._settings.zIndex) {
+                overlay.style.zIndex = String(state._settings.zIndex);
             }
-            if (state.settings.image.enabled) {
-                const elementSettings = state.settings.image;
+            if (state._settings.image.enabled) {
+                const elementSettings = state._settings.image;
                 const element = WaitOverlay._createElement(overlay, elementSettings.order, elementSettings.autoResize, elementSettings.resizeFactor, elementSettings.animation);
                 const image = elementSettings.value.toLowerCase();
                 if (image.startsWith("<svg") && image.endsWith("</svg>")) {
                     element.innerHTML = elementSettings.value;
-                    this._applyInlineSvgStyles(element, state.settings);
+                    this._applyInlineSvgStyles(element, state._settings);
                 }
                 else if (".svg" == image.slice(-4) || "data:image/svg" == image.slice(0, 14)) {
                     fetch(elementSettings.value, { method: "GET" })
                         .then((response) => response.text())
                         .then((svgContent) => {
-                        if (state.overlayElement) {
+                        if (state._overlay) {
                             element.innerHTML = svgContent;
-                            this._applyInlineSvgStyles(element, state.settings);
+                            this._applyInlineSvgStyles(element, state._settings);
                         }
                     })
                         .catch(() => { });
@@ -249,56 +249,56 @@ export default class WaitOverlay {
                     element.classList.add(elementSettings.class);
                 }
             }
-            if (state.settings.custom.enabled) {
-                const elementSettings = state.settings.custom;
+            if (state._settings.custom.enabled) {
+                const elementSettings = state._settings.custom;
                 const element = WaitOverlay._createElement(overlay, elementSettings.order, elementSettings.autoResize, elementSettings.resizeFactor, elementSettings.animation);
                 element.innerHTML = elementSettings.value;
             }
-            if (state.settings.text.enabled) {
-                const elementSettings = state.settings.text;
-                state.textElement = WaitOverlay._createElement(overlay, elementSettings.order, elementSettings.autoResize, elementSettings.resizeFactor, elementSettings.animation);
-                state.textElement.classList.add("waitoverlay_text");
-                state.textElement.textContent = elementSettings.value;
+            if (state._settings.text.enabled) {
+                const elementSettings = state._settings.text;
+                state._text = WaitOverlay._createElement(overlay, elementSettings.order, elementSettings.autoResize, elementSettings.resizeFactor, elementSettings.animation);
+                state._text.classList.add("waitoverlay_text");
+                state._text.textContent = elementSettings.value;
                 if (elementSettings.class) {
-                    state.textElement.classList.add(elementSettings.class);
+                    state._text.classList.add(elementSettings.class);
                 }
                 else if (elementSettings.color) {
-                    state.textElement.style.color = elementSettings.color;
+                    state._text.style.color = elementSettings.color;
                 }
             }
-            if (state.settings.progress.enabled) {
-                const elementSettings = state.settings.progress;
+            if (state._settings.progress.enabled) {
+                const elementSettings = state._settings.progress;
                 const element = WaitOverlay._createElement(overlay, elementSettings.order, elementSettings.autoResize, elementSettings.resizeFactor);
                 element.classList.add("waitoverlay_progress");
                 const wrapper = document.createElement("div");
-                WaitOverlay._applyCss(wrapper, WaitOverlay._css.progressBarWrapper);
+                WaitOverlay._applyCss(wrapper, WaitOverlay._css._progressBarWrapper);
                 element.appendChild(wrapper);
                 const bar = document.createElement("div");
-                WaitOverlay._applyCss(bar, WaitOverlay._css.progressBar);
+                WaitOverlay._applyCss(bar, WaitOverlay._css._progressBar);
                 wrapper.appendChild(bar);
                 const progressData = {
-                    bar: bar,
-                    position: "",
-                    margin: "0",
-                    min: parseFloat(String(elementSettings.min)),
-                    max: parseFloat(String(elementSettings.max)),
-                    speed: parseInt(String(elementSettings.speed), 10)
+                    _bar: bar,
+                    _position: "",
+                    _margin: "0",
+                    _min: parseFloat(String(elementSettings.min)),
+                    _max: parseFloat(String(elementSettings.max)),
+                    _speed: parseInt(String(elementSettings.speed), 10)
                 };
                 if (WaitOverlay._validProgressPositions.includes(elementSettings.position)) {
-                    progressData.position = elementSettings.position;
+                    progressData._position = elementSettings.position;
                 }
                 if (WaitOverlay._validSizes.test(elementSettings.margin)) {
-                    progressData.margin = elementSettings.margin;
+                    progressData._margin = elementSettings.margin;
                 }
-                WaitOverlay._applyCss(element, WaitOverlay._css.progressFixed);
-                switch (progressData.position) {
+                WaitOverlay._applyCss(element, WaitOverlay._css._progressFixed);
+                switch (progressData._position) {
                     case "top": {
-                        element.style.top = progressData.margin;
+                        element.style.top = progressData._margin;
                         break;
                     }
                     case "bottom": {
                         element.style.top = "auto";
-                        element.style.bottom = progressData.margin;
+                        element.style.bottom = progressData._margin;
                         break;
                     }
                 }
@@ -308,25 +308,25 @@ export default class WaitOverlay {
                 else if (elementSettings.color) {
                     bar.style.background = elementSettings.color;
                 }
-                state.progress = progressData;
+                state._progress = progressData;
             }
-            state.overlayElement = overlay;
+            state._overlay = overlay;
             target.appendChild(overlay);
-            if (state.settings.resize) {
+            if (state._settings.resize) {
                 this._intervalResize(state, target, true);
                 const observer = new ResizeObserver(() => {
                     this._intervalResize(state, target, false);
                 });
                 observer.observe(target);
-                state.resizeObserver = observer;
+                state._resizeObserver = observer;
             }
             overlay.style.opacity = "1";
-            if (0 < state.settings.fade[0]) {
+            if (0 < state._settings.fade[0]) {
                 overlay.style.opacity = "0";
-                overlay.style.transition = "opacity " + state.settings.fade[0] + "ms";
-                state.fadeAnimationId = requestAnimationFrame(() => {
-                    if (state.overlayElement) {
-                        state.overlayElement.style.opacity = "1";
+                overlay.style.transition = "opacity " + state._settings.fade[0] + "ms";
+                state._fadeAnimationId = requestAnimationFrame(() => {
+                    if (state._overlay) {
+                        state._overlay.style.opacity = "1";
                     }
                 });
             }
@@ -336,20 +336,20 @@ export default class WaitOverlay {
         const target = container || document.body;
         const state = this._states.get(target);
         if (state) {
-            state.showCount--;
-            if (state.showCount < 0) {
-                state.showCount = 0;
+            state._showCount--;
+            if (state._showCount < 0) {
+                state._showCount = 0;
             }
-            if (force || 0 >= state.showCount) {
-                if (state.overlayElement) {
-                    const overlay = state.overlayElement;
-                    const fadeDuration = state.settings.fade[1];
+            if (force || 0 >= state._showCount) {
+                if (state._overlay) {
+                    const overlay = state._overlay;
+                    const fadeDuration = state._settings.fade[1];
                     if (0 < fadeDuration) {
                         overlay.style.transition = "opacity " + fadeDuration + "ms";
                         overlay.addEventListener("transitionend", () => {
                             this._cleanup(state, target);
                         }, { once: true });
-                        setTimeout(() => {
+                        state._fadeTimeoutId = setTimeout(() => {
                             this._cleanup(state, target);
                         }, fadeDuration + 50);
                         overlay.style.opacity = "0";
@@ -367,34 +367,34 @@ export default class WaitOverlay {
     Resize(container) {
         const target = container || document.body;
         const state = this._states.get(target);
-        if (state && state.overlayElement) {
+        if (state && state._overlay) {
             this._intervalResize(state, target, true);
         }
     }
     Text(value, container) {
         const target = container || document.body;
         const state = this._states.get(target);
-        if (state && state.textElement) {
-            state.textElement.style.display = "none";
+        if (state && state._text) {
+            state._text.style.display = "none";
             if (false !== value) {
-                state.textElement.style.display = "";
-                state.textElement.textContent = value;
+                state._text.style.display = "";
+                state._text.textContent = value;
             }
         }
     }
     Progress(value, container) {
         const target = container || document.body;
         const state = this._states.get(target);
-        if (state && state.progress) {
+        if (state && state._progress) {
             if (false === value) {
-                state.progress.bar.style.display = "none";
+                state._progress._bar.style.display = "none";
             }
-            else if (state.progress.max > state.progress.min) {
-                let v = ((isNaN(value) ? 0 : value) - state.progress.min) * 100 / (state.progress.max - state.progress.min);
+            else if (state._progress._max > state._progress._min) {
+                let v = ((isNaN(value) ? 0 : value) - state._progress._min) * 100 / (state._progress._max - state._progress._min);
                 v = Math.max(0, Math.min(100, v) || 0);
-                state.progress.bar.style.display = "";
-                state.progress.bar.style.transition = "width " + state.progress.speed + "ms";
-                state.progress.bar.style.width = v + "%";
+                state._progress._bar.style.display = "";
+                state._progress._bar.style.transition = "width " + state._progress._speed + "ms";
+                state._progress._bar.style.width = v + "%";
             }
         }
     }
@@ -410,87 +410,86 @@ export default class WaitOverlay {
     }
     _getState(container, options) {
         let state = this._states.get(container);
-        const settings = (!state || (null === state.overlayElement)) ? WaitOverlay._deepMerge(this._settings, options || {}) : state.settings;
+        const settings = (!state || (null === state._overlay)) ? WaitOverlay._deepMerge(this._settings, options || {}) : state._settings;
         if (!state) {
             state = {
-                wholePage: container === document.body,
-                settings: {},
-                overlayElement: null,
-                textElement: null,
-                progress: null,
-                resizeObserver: undefined,
-                fadeAnimationId: undefined,
-                showCount: 0
+                _wholePage: container === document.body,
+                _settings: {},
+                _overlay: null,
+                _text: null,
+                _progress: null,
+                _resizeObserver: undefined,
+                _fadeAnimationId: undefined,
+                _fadeTimeoutId: undefined,
+                _showCount: 0
             };
             this._states.set(container, state);
         }
-        state.settings = settings;
+        state._settings = settings;
         return state;
     }
     _intervalResize(state, container, force) {
-        if (state.overlayElement) {
-            const overlay = state.overlayElement;
-            const htmlContainer = container;
-            const visible = 0 < htmlContainer.offsetWidth || 0 < htmlContainer.offsetHeight;
-            overlay.style.display = visible ? WaitOverlay._css.overlay.display : "none";
-            if (!state.wholePage) {
+        if (state._overlay) {
+            const overlay = state._overlay;
+            const visible = 0 < container.offsetWidth || 0 < container.offsetHeight;
+            overlay.style.display = visible ? WaitOverlay._css._overlay.display : "none";
+            if (!state._wholePage) {
                 overlay.style.position = "absolute";
                 overlay.style.top = "0";
                 overlay.style.left = "0";
-                overlay.style.width = htmlContainer.offsetWidth + "px";
-                overlay.style.height = htmlContainer.offsetHeight + "px";
+                overlay.style.width = container.offsetWidth + "px";
+                overlay.style.height = container.offsetHeight + "px";
             }
-            if (0 < state.settings.size.value) {
-                let size = state.settings.size.value;
-                if ("" === state.settings.size.units) {
+            if (0 < state._settings.size.value) {
+                let size = state._settings.size.value;
+                if ("" === state._settings.size.units) {
                     let containerWidth;
                     let containerHeight;
-                    if (state.wholePage) {
+                    if (state._wholePage) {
                         containerWidth = window.innerWidth;
                         containerHeight = window.innerHeight;
                     }
                     else {
-                        containerWidth = htmlContainer.clientWidth;
-                        containerHeight = htmlContainer.clientHeight;
+                        containerWidth = container.clientWidth;
+                        containerHeight = container.clientHeight;
                     }
                     size = Math.min(containerWidth, containerHeight) * size / 100;
-                    if (state.settings.maxSize && size > state.settings.maxSize) {
-                        size = state.settings.maxSize;
+                    if (state._settings.maxSize && size > state._settings.maxSize) {
+                        size = state._settings.maxSize;
                     }
-                    if (state.settings.minSize && size < state.settings.minSize) {
-                        size = state.settings.minSize;
+                    if (state._settings.minSize && size < state._settings.minSize) {
+                        size = state._settings.minSize;
                     }
                 }
-                const units = state.settings.size.units || "px";
-                overlay.querySelectorAll(":scope > .waitoverlay_element").forEach((el) => {
-                    const htmlEl = el;
-                    if (force || "1" === htmlEl.dataset.autoresize) {
-                        const resizeFactor = parseFloat(htmlEl.dataset.resizefactor || "1");
+                const units = state._settings.size.units || "px";
+                overlay.querySelectorAll(":scope > .waitoverlay_element").forEach((element) => {
+                    if (force || "1" === element.dataset.autoresize) {
+                        const resizeFactor = parseFloat(element.dataset.resizefactor || "1");
                         const sizeValue = (size * resizeFactor) + units;
-                        if (htmlEl.classList.contains("waitoverlay_fa") || htmlEl.classList.contains("waitoverlay_text")) {
-                            htmlEl.style.fontSize = sizeValue;
+                        if (element.classList.contains("waitoverlay_fa") || element.classList.contains("waitoverlay_text")) {
+                            element.style.fontSize = sizeValue;
                         }
-                        else if (htmlEl.classList.contains("waitoverlay_progress")) {
-                            if (state.progress) {
-                                state.progress.bar.style.height = sizeValue;
-                                switch (state.progress.position) {
+                        else if (element.classList.contains("waitoverlay_progress")) {
+                            if (state._progress) {
+                                state._progress._bar.style.height = sizeValue;
+                                switch (state._progress._position) {
                                     case "top": {
-                                        htmlEl.style.top = state.progress.margin;
-                                        const currentTop = htmlEl.offsetTop;
-                                        state.progress.bar.style.top = (currentTop - (size * resizeFactor * 0.5)) + units;
+                                        element.style.top = state._progress._margin;
+                                        const currentTop = element.offsetTop;
+                                        state._progress._bar.style.top = (currentTop - (size * resizeFactor * 0.5)) + units;
                                         break;
                                     }
                                     case "bottom": {
-                                        htmlEl.style.top = "auto";
-                                        htmlEl.style.bottom = state.progress.margin;
+                                        element.style.top = "auto";
+                                        element.style.bottom = state._progress._margin;
                                         break;
                                     }
                                 }
                             }
                         }
                         else {
-                            htmlEl.style.width = sizeValue;
-                            htmlEl.style.height = sizeValue;
+                            element.style.width = sizeValue;
+                            element.style.height = sizeValue;
                         }
                     }
                 });
@@ -498,35 +497,38 @@ export default class WaitOverlay {
         }
     }
     _cleanup(state, container) {
-        if (state.resizeObserver) {
-            state.resizeObserver.disconnect();
-            state.resizeObserver = undefined;
+        if (state._resizeObserver) {
+            state._resizeObserver.disconnect();
+            state._resizeObserver = undefined;
         }
-        if (state.fadeAnimationId) {
-            cancelAnimationFrame(state.fadeAnimationId);
-            state.fadeAnimationId = undefined;
+        if (undefined !== state._fadeAnimationId) {
+            cancelAnimationFrame(state._fadeAnimationId);
+            state._fadeAnimationId = undefined;
         }
-        if (state.overlayElement) {
-            state.overlayElement.remove();
-            state.overlayElement = null;
+        if (undefined !== state._fadeTimeoutId) {
+            clearTimeout(state._fadeTimeoutId);
+            state._fadeTimeoutId = undefined;
         }
-        state.textElement = null;
-        state.progress = null;
-        state.showCount = 0;
+        if (state._overlay) {
+            state._overlay.remove();
+            state._overlay = null;
+        }
+        state._text = null;
+        state._progress = null;
+        state._showCount = 0;
         this._states.delete(container);
     }
     _applyInlineSvgStyles(element, settings) {
         const svgChild = element.firstElementChild;
         if (svgChild instanceof SVGElement) {
-            WaitOverlay._applyCss(svgChild, WaitOverlay._css.svg);
+            WaitOverlay._applyCss(svgChild, WaitOverlay._css._svg);
         }
         if (!settings.image.class && settings.image.color.fill) {
             const children = element.querySelectorAll("*");
             children.forEach((child) => {
-                const htmlChild = child;
-                htmlChild.style.fill = settings.image.color.fill;
+                child.style.fill = settings.image.color.fill;
                 if (settings.image.color.stroke) {
-                    htmlChild.style.stroke = settings.image.color.stroke;
+                    child.style.stroke = settings.image.color.stroke;
                 }
             });
         }

@@ -1,4 +1,7 @@
 type Undefinedable<T> = T | undefined;
+type DeepPartial<T> = {
+    [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K];
+};
 type Animation = {
     name: string;
     time: string;
@@ -58,7 +61,7 @@ export type Settings = {
     };
     maxSize: number;
     minSize: number;
-    direction: string;
+    direction: "row" | "column";
     fade: [number, number];
     zIndex: Undefinedable<number>;
 };
@@ -77,13 +80,13 @@ export default class WaitOverlay {
     private readonly _states;
     private _settings;
     private constructor();
-    Show(options?: Partial<Settings>, container?: Element): void;
+    Show(options?: DeepPartial<Settings>, container?: HTMLElement): void;
     Hide(force?: boolean, container?: Element): void;
-    Resize(container?: Element): void;
+    Resize(container?: HTMLElement): void;
     Text(value: string | false, container?: Element): void;
     Progress(value: number | false, container?: Element): void;
     Destroy(container?: Element): void;
-    Configure(settings: Partial<Settings>): void;
+    Configure(settings: DeepPartial<Settings>): void;
     private _getState;
     private _intervalResize;
     private _cleanup;
