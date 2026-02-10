@@ -17,8 +17,6 @@ A flexible loading overlay for the browser. Started as a refactor of [jquery-loa
 
 ## Usage
 
-In browser:
-
 ```html
 <script type="module">
 import WaitOverlay from 'https://cdn.jsdelivr.net/gh/StefanoBalocco/WaitOverlay/WaitOverlay.min.js';
@@ -29,15 +27,6 @@ overlay.Show( { text: { enabled: true, value: "Loading..." } } );
 overlay.Hide();
 </script>
 ```
-
-In node:
-
-```javascript
-import WaitOverlay from 'WaitOverlay.js';
-const overlay = WaitOverlay.GetInstance();
-```
-
----
 
 ## API
 
