@@ -1,6 +1,6 @@
 # WaitOverlay
 
-A flexible loading overlay for the browser. Inspired by [jquery-loading-overlay](https://gasparesganga.com/labs/jquery-loading-overlay/).
+A flexible loading overlay for the browser. Started as a refactor of [jquery-loading-overlay](https://gasparesganga.com/labs/jquery-loading-overlay/).
 
 ---
 
