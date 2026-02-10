@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WaitOverlay - Demo</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f8f9fa;
+            color: #333;
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+        }
+        h2 {
+            color: #34495e;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 8px;
+            margin-top: 30px;
+        }
+        h3 {
+            color: #555;
+            margin-top: 20px;
+        }
+        .section {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 25px;
+        }
+        .info {
+            font-size: 14px;
+            color: #666;
+            margin: 10px 0;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 5px;
+            border-left: 3px solid #3498db;
+        }
+        button {
+            padding: 10px 18px;
+            margin: 5px;
+            font-size: 14px;
+            cursor: pointer;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+        button:hover {
+            background: #2980b9;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+        button:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        button.primary {
+            background: #3498db;
+        }
+        button.secondary {
+            background: #95a5a6;
+        }
+        button.secondary:hover {
+            background: #7f8c8d;
+        }
+        button.danger {
+            background: #e74c3c;
+        }
+        button.danger:hover {
+            background: #c0392b;
+        }
+        button.success {
+            background: #27ae60;
+        }
+        button.success:hover {
+            background: #229954;
+        }
+        input[type="text"] {
+            padding: 10px;
+            margin: 5px 5px 5px 0;
+            font-size: 14px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            width: 250px;
+            transition: border-color 0.2s;
+        }
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+        .input-group {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin: 15px 0;
+        }
+        .button-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        #test-container {
+            width: 100%;
+            height: 200px;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 18px;
+            margin: 20px 0;
+            position: relative;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 WaitOverlay - Demo</h1>
+
+    <div class="section">
+        <div class="info">
+            This demo page showcases all features of WaitOverlay. All full-page overlays auto-hide after 2.5 seconds.
+        </div>
+
+        <h3>Basic Overlays</h3>
+        <div class="button-group">
+            <button class="primary" onclick="demoFullPage()">📄 Full-Page Overlay</button>
+            <button class="primary" onclick="demoWithProgress()">📊 Overlay with Progress</button>
+        </div>
+
+        <h3>Container Overlay</h3>
+        <div id="test-container">
+            Container (pink)
+        </div>
+        <div class="button-group">
+            <button class="primary" onclick="demoContainer()">Overlay on Container</button>
+        </div>
+
+        <h3>Dynamic Text</h3>
+        <div class="input-group">
+            <input type="text" id="textInput" placeholder="Enter text..." value="Loading...">
+            <button class="primary" onclick="demoWithText()">Show Overlay with Text</button>
+        </div>
+
+        <h3>Visual Variants</h3>
+        <div class="button-group">
+            <button class="primary" onclick="demoDarkMode()">🌙 Dark Mode</button>
+            <button class="primary" onclick="demoCustomSize()">📏 Custom Size (80px)</button>
+            <button class="primary" onclick="demoNoFade()">⚡ No Fade Animation</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import WaitOverlay from 'https://cdn.jsdelivr.net/gh/StefanoBalocco/WaitOverlay/WaitOverlay.min.js';
+
+        const overlay = WaitOverlay.GetInstance();
+        const AUTO_HIDE_DELAY = 2500;
+        const container = document.getElementById('test-container');
+
+        function log(message) {
+            console.log(`[WaitOverlay Demo] ${message}`);
+        }
+
+        window.demoFullPage = () => {
+            log('Demo: Full-Page Overlay');
+            overlay.Show();
+            setTimeout(() => overlay.Hide(), AUTO_HIDE_DELAY);
+        };
+
+        window.demoWithProgress = () => {
+            log('Demo: Overlay with Progress');
+            overlay.Show({
+                progress: { enabled: true },
+                text: { enabled: true, value: '0%' }
+            });
+
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += 2;
+                if (progress > 100) {
+                    progress = 100;
+                    clearInterval(interval);
+                    setTimeout(() => overlay.Hide(), 500);
+                }
+                overlay.Progress(progress);
+                overlay.Text(`${progress}%`);
+            }, 50);
+        };
+
+        window.demoContainer = () => {
+            log('Demo: Overlay on Container');
+            overlay.Show({ text: { enabled: true, value: 'Loading...' } }, container);
+            setTimeout(() => overlay.Hide(false, container), AUTO_HIDE_DELAY);
+        };
+
+        window.demoWithText = () => {
+            const text = document.getElementById('textInput').value;
+            log(`Demo: Overlay with text "${text}"`);
+            overlay.Show({ text: { enabled: true, value: text } });
+            setTimeout(() => overlay.Hide(), AUTO_HIDE_DELAY);
+        };
+
+        window.demoDarkMode = () => {
+            log('Demo: Dark Mode');
+            overlay.Show({
+                text: { enabled: true, value: 'Dark mode', color: '#ffffff' },
+                background: 'rgba(0, 0, 0, 0.9)',
+                image: { color: { fill: '#ffffff' } }
+            });
+            setTimeout(() => overlay.Hide(), AUTO_HIDE_DELAY);
+        };
+
+        window.demoCustomSize = () => {
+            log('Demo: Custom Size (80px)');
+            overlay.Show({
+                text: { enabled: true, value: 'Custom size' },
+                size: { value: 80, units: 'px' }
+            });
+            setTimeout(() => overlay.Hide(), AUTO_HIDE_DELAY);
+        };
+
+        window.demoNoFade = () => {
+            log('Demo: No Fade');
+            overlay.Show({
+                text: { enabled: true, value: 'No animation' },
+                fade: [0, 0]
+            });
+            setTimeout(() => overlay.Hide(), AUTO_HIDE_DELAY);
+        };
+
+        log('WaitOverlay demo page loaded');
+    </script>
+</body>
+</html>
