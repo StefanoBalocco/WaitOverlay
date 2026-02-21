@@ -19,7 +19,7 @@ A flexible loading overlay for the browser. Started as a refactor of [jquery-loa
 
 ```html
 <script type="module">
-import WaitOverlay from 'https://cdn.jsdelivr.net/gh/StefanoBalocco/WaitOverlay/WaitOverlay.min.js';
+import WaitOverlay from 'https://cdn.jsdelivr.net/gh/StefanoBalocco/WaitOverlay@1.0.0/WaitOverlay.min.js';
 
 const overlay = WaitOverlay.GetInstance();
 overlay.Show( { text: { enabled: true, value: "Loading..." } } );
