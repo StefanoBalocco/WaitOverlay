@@ -17,6 +17,23 @@ A flexible loading overlay for the browser. Started as a refactor of [jquery-loa
 
 ## Usage
 
+Install from npm:
+
+```bash
+npm install @stefanobalocco/waitoverlay
+```
+
+```js
+import WaitOverlay from '@stefanobalocco/waitoverlay';
+
+const overlay = WaitOverlay.GetInstance();
+overlay.Show( { text: { enabled: true, value: "Loading..." } } );
+// Later...
+overlay.Hide();
+```
+
+Or include directly via CDN:
+
 ```html
 <script type="module">
 import WaitOverlay from 'https://cdn.jsdelivr.net/gh/StefanoBalocco/WaitOverlay@1.0.1/WaitOverlay.min.js';
