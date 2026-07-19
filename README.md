@@ -6,7 +6,7 @@ A flexible loading overlay for the browser. Started as a refactor of [jquery-loa
 
 ## Features
 
-- **Whole-page or element-specific**: Show overlays on `<body>` or any DOM element.
+- **Whole-page or element-specific**: Show overlays on `<body>` or any `HTMLElement`.
 - **Multiple content types**: SVG spinner, raster images, custom HTML, text, and progress bar.
 - **Responsive sizing**: Auto-resize elements based on container dimensions.
 - **CSS animations**: Built-in rotate, fade-in, and pulse animations.
@@ -54,7 +54,7 @@ overlay.Show( { text: { enabled: true, value: "Saving..." } }, el );
 ```
 
 - **`options`** (`DeepPartial<Settings>`, optional): Overrides for the overlay that is being shown. Additional options are ignored while the overlay is already visible.
-- **`container`** (`Element`, optional): Target element. Defaults to `document.body`. When targeting a specific element, make sure it has a non-static CSS `position` (e.g. `relative`), otherwise the overlay will not be positioned correctly.
+- **`container`** (`HTMLElement`, optional): Target element. Defaults to `document.body`. When targeting a specific element, make sure it has a non-static CSS `position` (e.g. `relative`), otherwise the overlay will not be positioned correctly.
 
 #### `Hide( force?, container? )`
 
@@ -80,7 +80,7 @@ const overlay = WaitOverlay.GetInstance();
 overlay.Resize();
 ```
 
-- **`container`** (`Element`, optional): Target element. Defaults to `document.body`.
+- **`container`** (`HTMLElement`, optional): Target element. Defaults to `document.body`.
 
 #### `Text( value, container? )`
 
@@ -107,14 +107,14 @@ overlay.Progress( 50 );
 overlay.Progress( false );
 ```
 
-- **`value`** (`number | false`): Value between `progressMin` and `progressMax`, or `false` to hide.
+- **`value`** (`number | false`): Value between `progress.min` and `progress.max`, or `false` to hide.
 - **`container`** (`Element`, optional): Target element. Defaults to `document.body`.
 
-> **Note**: No-op if the overlay was not configured with `progress: true`.
+> **Note**: No-op if the overlay was not configured with `progress.enabled` set to `true`.
 
 #### `Destroy( container? )`
 
-Clears intervals, removes the overlay from the DOM, and forgets the cached state for the container.
+Cancels pending animation frames and timeouts, disconnects the ResizeObserver, removes the overlay from the DOM, and forgets the cached state for the container.
 
 ```javascript
 const overlay = WaitOverlay.GetInstance();
@@ -221,21 +221,21 @@ All settings are optional. Defaults are shown below.
 
 | Setting | Type | Default | Description |
 |---------|------|---------|-------------|
-| `direction` | `string` | `"column"` | Flexbox direction: `"column"` or `"row"`. |
+| `direction` | `"row" \| "column"` | `"column"` | Flexbox direction. |
 | `fade` | `[number, number]` | `[400, 200]` | Fade animation as `[fadeInMs, fadeOutMs]`. Use `[0, 0]` to disable. |
 | `resize` | `boolean` | `true` | Whether automatic resize is enabled. |
 | `zIndex` | `number \| undefined` | `2147483647` | CSS z-index for the overlay. |
 
 ### Animations
 
-The `*Animation` settings accept a string with a time and/or animation name, in any order:
+Each content type that supports animation has an `animation` object with two string fields:
 
-- `"2000ms rotate_right"` — 2 seconds, rotate clockwise
-- `"rotate_left"` — default time (2s), rotate counter-clockwise
-- `"500ms"` — 500ms, default animation (rotate_right)
-- `"pulse 1s"` — 1 second, pulse animation
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | `string` | One of `rotate_right`, `rotate_left`, `fadein`, `pulse`. Empty string disables. |
+| `time` | `string` | CSS duration value (e.g. `"2000ms"`, `"1s"`). Empty string disables. |
 
-Available animations: `rotate_right`, `rotate_left`, `fadein`, `pulse`.
+Invalid animation names are silently reset to an empty string.
 
 ---
 
@@ -251,7 +251,7 @@ Available animations: `rotate_right`, `rotate_left`, `fadein`, `pulse`.
     </div>
 
     <script type="module">
-        import WaitOverlay from './waitOverlay.min.js';
+        import WaitOverlay from './WaitOverlay.min.js';
 
         const overlay = WaitOverlay.GetInstance();
 
@@ -292,4 +292,21 @@ Contributions are welcome! Please submit issues or pull requests on the GitHub r
 
 ## License
 
-WaitOverlay is released under the BSD-3-Clause License.
+WaitOverlay is released under the BSD-3-Clause License. See [LICENSE](LICENSE).
+
+---
+
+## Development
+
+```bash
+# Install dependencies
+pnpm install
+
+# Build the library, minified bundle, declarations, and compiled tests
+pnpm run build
+
+# Run tests with c8 coverage (text + LCOV under coverage/)
+pnpm run tests
+```
+
+The library source is `WaitOverlay.ts`. The build pipeline compiles TypeScript, minifies with Terser with property mangling for names beginning `_`, and then passes the result through [TerserCompanion](https://github.com/StefanoBalocco/TerserCompanion) for repeated-expression aliasing.

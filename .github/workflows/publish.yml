@@ -1,0 +1,43 @@
+name: Publish
+
+on:
+  release:
+    types: [ published ]
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 26
+          registry-url: https://registry.npmjs.org/
+          cache: pnpm
+      - name: Validate release
+        run: |
+          if [ "${{ github.event.release.prerelease }}" = "true" ]; then
+            echo "Pre-releases are not publishable via this workflow" >&2
+            exit 1
+          fi
+          TAG="${GITHUB_REF#refs/tags/}"
+          VERSION="v$(node -p "require('./package.json').version")"
+          if [ "$TAG" != "$VERSION" ]; then
+            echo "Tag $TAG does not match package version $VERSION" >&2
+            exit 1
+          fi
+          PRERELEASE="$(node -p "(require('./package.json').version).includes('-')")"
+          if [ "$PRERELEASE" = "true" ]; then
+            echo "Package version contains a prerelease suffix" >&2
+            exit 1
+          fi
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run build
+      - run: pnpm run tests
+      - run: pnpm publish --access public --no-git-checks
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

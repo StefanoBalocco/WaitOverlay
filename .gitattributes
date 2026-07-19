@@ -1,2 +1,2 @@
-*.js -linguist-detectable
-*.html -linguist-detectable
+*.js linguist-detectable=false
+*.mjs linguist-detectable=false
