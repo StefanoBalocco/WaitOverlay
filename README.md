@@ -36,7 +36,7 @@ Or include directly via CDN:
 
 ```html
 <script type="module">
-import WaitOverlay from 'https://cdn.jsdelivr.net/gh/StefanoBalocco/WaitOverlay@1.0.1/WaitOverlay.min.js';
+import WaitOverlay from 'https://cdn.jsdelivr.net/npm/@stefanobalocco/waitoverlay@latest/WaitOverlay.min.js';
 
 const overlay = WaitOverlay.GetInstance();
 overlay.Show( { text: { enabled: true, value: "Loading..." } } );
