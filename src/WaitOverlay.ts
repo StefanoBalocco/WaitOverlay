@@ -284,14 +284,10 @@ export default class WaitOverlay {
 		}
 	};
 
-	private static _instance: Nullable<WaitOverlay> = null;
+	private static _instance: Undefinedable<WaitOverlay>;
 
-	// Static methods
-	public static GetInstance(): WaitOverlay {
-		if( null === WaitOverlay._instance ) {
-			WaitOverlay._instance = new WaitOverlay();
-		}
-		return WaitOverlay._instance;
+	public static get instance(): WaitOverlay {
+		return ( WaitOverlay._instance ??= new WaitOverlay( ) );
 	}
 
 	// Instance properties

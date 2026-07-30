@@ -1,0 +1,19 @@
+[
+  {
+    "target": "library",
+    "tsConfig": "tsconfig.json",
+    "name": "Library",
+    "minify": {
+      "files": [
+        "dist/WaitOverlay.js"
+      ],
+      "terser": true,
+      "terserCompanion": true
+    }
+  },
+  {
+    "target": "tests",
+    "tsConfig": "tests/tsconfig.json",
+    "name": "Tests"
+  }
+]

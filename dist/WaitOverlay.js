@@ -165,12 +165,9 @@ export default class WaitOverlay {
             "height": "100%"
         }
     };
-    static _instance = null;
-    static GetInstance() {
-        if (null === WaitOverlay._instance) {
-            WaitOverlay._instance = new WaitOverlay();
-        }
-        return WaitOverlay._instance;
+    static _instance;
+    static get instance() {
+        return (WaitOverlay._instance ??= new WaitOverlay());
     }
     _states;
     _settings;
@@ -534,3 +531,4 @@ export default class WaitOverlay {
         }
     }
 }
+//# sourceMappingURL=WaitOverlay.js.map

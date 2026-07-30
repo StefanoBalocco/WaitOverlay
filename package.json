@@ -1,56 +1,50 @@
 {
-	"name": "@stefanobalocco/waitoverlay",
-	"description": "A flexible loading overlay",
-	"type": "module",
-	"exports": {
-		".": {
-			"import": "./WaitOverlay.min.js",
-			"types": "./WaitOverlay.d.ts"
-		}
-	},
-	"main": "WaitOverlay.min.js",
-	"types": "WaitOverlay.d.ts",
-	"files": [
-		"WaitOverlay.d.ts",
-		"WaitOverlay.js",
-		"WaitOverlay.min.js",
-		"WaitOverlay.test.js",
-		"WaitOverlay.test.ts",
-		"WaitOverlay.ts",
-		"build.mjs"
-	],
-	"publishConfig": {
-		"access": "public"
-	},
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/StefanoBalocco/WaitOverlay.git"
-	},
-	"version": "1.0.1",
-	"keywords": [
-		"loading",
-		"overlay",
-		"spinner",
-		"progress"
-	],
-	"author": "Stefano Balocco <stefano.balocco@gmail.com>",
-	"license": "BSD-3-Clause",
-	"bugs": {
-		"url": "https://github.com/StefanoBalocco/WaitOverlay/issues"
-	},
-	"homepage": "https://github.com/StefanoBalocco/WaitOverlay",
-	"scripts": {
-		"build": "node build.mjs all",
-		"build:library": "node build.mjs library",
-		"build:tests": "node build.mjs tests",
-		"tests": "c8 --reporter=text --reporter=lcov ava '*.test.js' --verbose"
-	},
-	"devDependencies": {
-		"@stefanobalocco/tersercompanion": "~1",
-		"ava": "~6",
-		"c8": "~12",
-		"jsdom": "~26",
-		"terser": "~5",
-		"typescript": "~6"
-	}
+  "name": "@stefanobalocco/waitoverlay",
+  "description": "A flexible loading overlay",
+  "version": "2.0.0",
+  "type": "module",
+  "types": "dist/WaitOverlay.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/WaitOverlay.d.ts",
+      "import": "./dist/WaitOverlay.min.js"
+    }
+  },
+  "files": [
+    "dist/WaitOverlay.js",
+    "dist/WaitOverlay.min.js",
+    "dist/WaitOverlay.d.ts"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/StefanoBalocco/WaitOverlay.git"
+  },
+  "keywords": [
+    "loading",
+    "overlay",
+    "spinner",
+    "progress"
+  ],
+  "author": "Stefano Balocco <stefano.balocco@gmail.com>",
+  "license": "BSD-3-Clause",
+  "bugs": {
+    "url": "https://github.com/StefanoBalocco/WaitOverlay/issues"
+  },
+  "homepage": "https://github.com/StefanoBalocco/WaitOverlay",
+  "scripts": {
+    "build": "tsBuild all",
+    "build:library": "tsBuild library",
+    "build:tests": "tsBuild tests",
+    "tests": "c8 --include=src --include=dist --exclude-after-remap --per-file --reporter=text --reporter=lcov ava 'tests/dist/*.test.js' --verbose"
+  },
+  "devDependencies": {
+    "@stefanobalocco/tsbuild": "^1",
+    "@types/jsdom": "^28",
+    "ava": "^8",
+    "c8": "^12",
+    "jsdom": "^28"
+  }
 }

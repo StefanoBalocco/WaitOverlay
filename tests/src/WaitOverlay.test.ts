@@ -1,28 +1,15 @@
 import test from 'ava';
 import type { ExecutionContext } from 'ava';
+import type { DOMWindow } from 'jsdom';
 import { JSDOM } from 'jsdom';
-import WaitOverlayOriginal from './WaitOverlay.js';
-import WaitOverlayMinified from './WaitOverlay.min.js';
+import WaitOverlayOriginal from '../../dist/WaitOverlay.js';
+// @ts-expect-error WaitOverlay.min.js intentionally shares the original public API.
+import WaitOverlayMinified from '../../dist/WaitOverlay.min.js';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
 type Nullable<T> = T | null;
 type Undefinedable<T> = T | undefined;
-
-interface WaitOverlayInstance {
-	GetInstance(): WaitOverlayInstance;
-	Show( options?: Record<string, unknown>, container?: HTMLElement ): void;
-	Hide( force?: boolean, container?: Element ): void;
-	Resize( container?: HTMLElement ): void;
-	Text( value: string | false, container?: Element ): void;
-	Progress( value: number | false, container?: Element ): void;
-	Destroy( container?: Element ): void;
-	Configure( settings: Record<string, unknown> ): void;
-}
-
-interface WaitOverlayClass {
-	GetInstance(): WaitOverlayInstance;
-}
 
 interface AnimationFrame {
 	id: number;
@@ -43,7 +30,7 @@ function _createEnv(): Env {
 		url: "http://localhost",
 		pretendToBeVisual: true
 	} );
-	const win: Window & typeof globalThis = dom.window as unknown as Window & typeof globalThis;
+	const win: DOMWindow = dom.window;
 	const doc: Document = win.document;
 
 	const fetchState: Map<string, { status: number; body: string }> = new Map();
@@ -94,14 +81,19 @@ function _applyEnv( env: Env ): void {
 	( globalThis as unknown as Record<string, unknown> ).structuredClone = structuredClone;
 }
 
-/** Discover the static _instance slot name (mangled in min) without calling GetInstance */
-function _discoverInstanceSlot( cls: WaitOverlayClass ): string {
+/** Discover the static _instance slot name (mangled in min) without triggering the instance getter, which lazily constructs the singleton. */
+function _discoverInstanceSlot( cls: typeof WaitOverlayOriginal ): string {
 	let returnValue: string = '';
-	const ownKeys: string[] = Object.getOwnPropertyNames( cls );
+	const descriptors: PropertyDescriptorMap = Object.getOwnPropertyDescriptors( cls );
+	const ownKeys: string[] = Object.getOwnPropertyNames( descriptors );
 	const cL1: number = ownKeys.length;
 	for( let iL1: number = 0; iL1 < cL1; iL1++ ) {
 		const key: string = ownKeys[ iL1 ];
-		const value: unknown = ( cls as unknown as Record<string, unknown> )[ key ];
+		const descriptor: PropertyDescriptor = descriptors[ key ];
+		if( 'get' in descriptor || 'set' in descriptor ) {
+			continue;
+		}
+		const value: unknown = descriptor.value;
 		if( 'function' !== typeof value && ( undefined === value || null === value ) ) {
 			if( '' !== returnValue ) {
 				throw new Error( '_discoverInstanceSlot: multiple candidate slots found' );
@@ -116,7 +108,7 @@ function _discoverInstanceSlot( cls: WaitOverlayClass ): string {
 }
 
 /** Find a WeakMap on an instance (target-agnostic) */
-function _getWeakMap( instance: WaitOverlayInstance ): Nullable<WeakMap<WeakKey, unknown>> {
+function _getWeakMap( instance: WaitOverlayOriginal ): Nullable<WeakMap<WeakKey, unknown>> {
 	for( const key of Reflect.ownKeys( instance as unknown as object ) ) {
 		const val: unknown = ( instance as unknown as Record<string | symbol, unknown> )[ key ];
 		if( val instanceof WeakMap ) {
@@ -147,9 +139,9 @@ function _getOverlayKey( state: Record<string | symbol, unknown> ): Nullable<str
 	return null;
 }
 
-function _resetEnv( cls: WaitOverlayClass, slot: string ): void {
+function _resetEnv( cls: typeof WaitOverlayOriginal, slot: string ): void {
 	( cls as unknown as Record<string, unknown> )[ slot ] = null;
-	cls.GetInstance();
+	cls.instance;
 }
 
 function setDim( el: HTMLElement, props: Record<string, number> ): void {
@@ -180,32 +172,32 @@ function runRAF( env: Env ): void {
 
 interface Target {
 	tag: string;
-	cls: WaitOverlayClass;
+	cls: typeof WaitOverlayOriginal;
 	slot: string;
 }
 
 const targets: readonly Target[] = [
-	{ tag: '[WaitOverlay-original]', cls: WaitOverlayOriginal as unknown as WaitOverlayClass, slot: '_instance' },
-	{ tag: '[WaitOverlay-minified]', cls: WaitOverlayMinified as WaitOverlayClass, slot: _discoverInstanceSlot( WaitOverlayMinified as WaitOverlayClass ) }
+	{ tag: '[WaitOverlay-original]', cls: WaitOverlayOriginal, slot: '_instance' },
+	{ tag: '[WaitOverlay-minified]', cls: WaitOverlayMinified as typeof WaitOverlayOriginal, slot: _discoverInstanceSlot( WaitOverlayMinified as typeof WaitOverlayOriginal ) }
 ];
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 for( const target of targets ) {
 	const tag: string = target.tag;
-	const cls: WaitOverlayClass = target.cls;
+	const cls: typeof WaitOverlayOriginal = target.cls;
 	const slot: string = target.slot;
 	let prefix: string = '';
 
 	// ── 1. Singleton ──────────────────────────────────────────
 	prefix = tag + ' Singleton';
 
-	test.serial( prefix + ': GetInstance returns same instance', async ( t: ExecutionContext ) => {
+	test.serial( prefix + ': instance returns same instance', async ( t: ExecutionContext ) => {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		const a: WaitOverlayInstance = cls.GetInstance();
-		const b: WaitOverlayInstance = cls.GetInstance();
+		const a: WaitOverlayOriginal = cls.instance;
+		const b: WaitOverlayOriginal = cls.instance;
 		t.is( a, b );
 	} );
 
@@ -228,7 +220,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		cls.GetInstance().Show();
+		cls.instance.Show();
 		t.truthy( env.doc.body.querySelector( ".waitoverlay" ) );
 	} );
 
@@ -236,7 +228,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		cls.GetInstance().Show( { image: { enabled: false } } );
+		cls.instance.Show( { image: { enabled: false } } );
 		t.truthy( env.doc.body.querySelector( ".waitoverlay" ) );
 	} );
 
@@ -245,7 +237,7 @@ for( const target of targets ) {
 		_applyEnv( env );
 		_resetEnv( cls, slot );
 		const c: HTMLElement = makeContainer( env.doc, 200, 200 );
-		cls.GetInstance().Show( { image: { enabled: false } }, c );
+		cls.instance.Show( { image: { enabled: false } }, c );
 		t.truthy( c.querySelector( ".waitoverlay" ) );
 	} );
 
@@ -253,7 +245,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		const o: WaitOverlayInstance = cls.GetInstance();
+		const o: WaitOverlayOriginal = cls.instance;
 		o.Show( { image: { enabled: false } } );
 		o.Show( { image: { enabled: false } } );
 		t.is( env.doc.body.querySelectorAll( ".waitoverlay" ).length, 1 );
@@ -263,7 +255,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		cls.GetInstance().Show( { direction: "row", image: { enabled: false } } );
+		cls.instance.Show( { direction: "row", image: { enabled: false } } );
 		const el: Nullable<Element> = env.doc.body.querySelector( ".waitoverlay" );
 		t.truthy( el );
 		t.is( ( el as HTMLElement ).style.flexDirection, "row" );
@@ -273,7 +265,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		cls.GetInstance().Show( { image: { enabled: false } } );
+		cls.instance.Show( { image: { enabled: false } } );
 		const el: Nullable<Element> = env.doc.body.querySelector( ".waitoverlay" );
 		t.truthy( el );
 		t.is( ( el as HTMLElement ).style.flexDirection, "column" );
@@ -283,7 +275,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		cls.GetInstance().Show( { backgroundClass: "bg", image: { enabled: false } } );
+		cls.instance.Show( { backgroundClass: "bg", image: { enabled: false } } );
 		const el: Nullable<Element> = env.doc.body.querySelector( ".waitoverlay" );
 		t.truthy( el );
 		t.true( el!.classList.contains( "bg" ) );
@@ -293,7 +285,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		cls.GetInstance().Show( { image: { enabled: false } } );
+		cls.instance.Show( { image: { enabled: false } } );
 		const el: Nullable<Element> = env.doc.body.querySelector( ".waitoverlay" );
 		t.truthy( el );
 		t.truthy( ( el as HTMLElement ).style.background );
@@ -303,7 +295,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		cls.GetInstance().Show( { zIndex: 999, image: { enabled: false } } );
+		cls.instance.Show( { zIndex: 999, image: { enabled: false } } );
 		t.is( ( env.doc.body.querySelector( ".waitoverlay" ) as HTMLElement ).style.zIndex, "999" );
 	} );
 
@@ -311,7 +303,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		cls.GetInstance().Show( { zIndex: undefined as unknown as number, image: { enabled: false } } );
+		cls.instance.Show( { zIndex: undefined as unknown as number, image: { enabled: false } } );
 		t.is( ( env.doc.body.querySelector( ".waitoverlay" ) as HTMLElement ).style.zIndex, "" );
 	} );
 
@@ -319,7 +311,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		cls.GetInstance().Show( { image: { enabled: false } } );
+		cls.instance.Show( { image: { enabled: false } } );
 		t.is( ( env.doc.body.querySelector( ".waitoverlay" ) as HTMLElement ).style.position, "fixed" );
 	} );
 
@@ -328,7 +320,7 @@ for( const target of targets ) {
 		_applyEnv( env );
 		_resetEnv( cls, slot );
 		const c: HTMLElement = makeContainer( env.doc, 200, 200 );
-		cls.GetInstance().Show( { image: { enabled: false } }, c );
+		cls.instance.Show( { image: { enabled: false } }, c );
 		t.is( ( c.querySelector( ".waitoverlay" ) as HTMLElement ).style.position, "absolute" );
 	} );
 
@@ -339,7 +331,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		cls.GetInstance().Show( { image: { enabled: false } } );
+		cls.instance.Show( { image: { enabled: false } } );
 		t.is( env.doc.body.querySelectorAll( ".waitoverlay_element" ).length, 0 );
 	} );
 
@@ -347,7 +339,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		cls.GetInstance().Show( {} );
+		cls.instance.Show( {} );
 		t.truthy( env.doc.body.querySelector( ".waitoverlay_element svg" ) );
 	} );
 
@@ -355,20 +347,23 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		cls.GetInstance().Show( { image: { color: { fill: "#ff0000", stroke: "#00ff00" }, class: "" } } );
+		cls.instance.Show( { image: { color: { fill: "#ff0000", stroke: "#00ff00" }, class: "" } } );
 		const svg: Nullable<Element> = env.doc.body.querySelector( ".waitoverlay_element svg" );
 		t.truthy( svg );
 		const circle: Nullable<Element> = svg!.querySelector( "circle" );
 		t.truthy( circle );
-		t.is( ( circle as HTMLElement ).style.fill, "#ff0000" );
-		t.is( ( circle as HTMLElement ).style.stroke, "#00ff00" );
+		const ref: HTMLElement = env.doc.createElement( 'div' );
+		ref.style.fill = '#ff0000';
+		ref.style.stroke = '#00ff00';
+		t.is( ( circle as HTMLElement ).style.fill, ref.style.fill );
+		t.is( ( circle as HTMLElement ).style.stroke, ref.style.stroke );
 	} );
 
 	test.serial( prefix + ': Show with SVG fill+class skips color styling', async ( t: ExecutionContext ) => {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		cls.GetInstance().Show( { image: { color: { fill: "#ff0000" }, class: "img-cls" } } );
+		cls.instance.Show( { image: { color: { fill: "#ff0000" }, class: "img-cls" } } );
 		const el: Nullable<Element> = env.doc.body.querySelector( ".waitoverlay_element" );
 		t.truthy( el );
 		t.true( el!.classList.contains( "img-cls" ) );
@@ -378,7 +373,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		cls.GetInstance().Show( { image: { value: "http://x.com/p.png" } } );
+		cls.instance.Show( { image: { value: "http://x.com/p.png" } } );
 		const el: Nullable<Element> = env.doc.body.querySelector( ".waitoverlay_element" );
 		t.truthy( el );
 		t.true( ( el as HTMLElement ).style.backgroundImage.includes( "p.png" ) );
@@ -388,7 +383,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		cls.GetInstance().Show( { image: { class: "ic" } } );
+		cls.instance.Show( { image: { class: "ic" } } );
 		t.true( ( env.doc.body.querySelector( ".waitoverlay_element" ) as Element ).classList.contains( "ic" ) );
 	} );
 
@@ -397,7 +392,7 @@ for( const target of targets ) {
 		_applyEnv( env );
 		_resetEnv( cls, slot );
 		env.fetchState.set( "http://x.com/s.svg", { status: 200, body: "<svg xmlns='http://www.w3.org/2000/svg'><circle r='5'/></svg>" } );
-		cls.GetInstance().Show( { image: { value: "http://x.com/s.svg" } } );
+		cls.instance.Show( { image: { value: "http://x.com/s.svg" } } );
 		t.truthy( env.doc.body.querySelector( ".waitoverlay_element" ) );
 		await new Promise<void>( ( r: () => void ) => setTimeout( r, 60 ) );
 		const svg: Nullable<Element> = env.doc.body.querySelector( ".waitoverlay_element svg" );
@@ -409,7 +404,7 @@ for( const target of targets ) {
 		_applyEnv( env );
 		_resetEnv( cls, slot );
 		env.fetchState.set( "data:image/svg+xml;utf8,<svg></svg>", { status: 200, body: "<svg xmlns='http://www.w3.org/2000/svg'><rect/></svg>" } );
-		cls.GetInstance().Show( { image: { value: "data:image/svg+xml;utf8,<svg></svg>" } } );
+		cls.instance.Show( { image: { value: "data:image/svg+xml;utf8,<svg></svg>" } } );
 		await new Promise<void>( ( r: () => void ) => setTimeout( r, 60 ) );
 		t.truthy( env.doc.body.querySelector( ".waitoverlay_element svg" ), "Data URI SVG should load" );
 	} );
@@ -418,7 +413,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		cls.GetInstance().Show( { image: { value: "http://x.com/missing.svg" } } );
+		cls.instance.Show( { image: { value: "http://x.com/missing.svg" } } );
 		t.truthy( env.doc.body.querySelector( ".waitoverlay_element" ) );
 		await new Promise<void>( ( r: () => void ) => setTimeout( r, 60 ) );
 		t.falsy( env.doc.body.querySelector( ".waitoverlay_element svg" ), "Failed fetch should not insert SVG" );
@@ -431,7 +426,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		cls.GetInstance().Show( { image: { animation: { name: "bogus", time: "500ms" } } } );
+		cls.instance.Show( { image: { animation: { name: "bogus", time: "500ms" } } } );
 		t.is( ( env.doc.body.querySelector( ".waitoverlay_element" ) as HTMLElement ).style.animationName, "" );
 	} );
 
@@ -439,7 +434,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		cls.GetInstance().Show( { image: { animation: { name: "pulse", time: "1s" } } } );
+		cls.instance.Show( { image: { animation: { name: "pulse", time: "1s" } } } );
 		const el: HTMLElement = env.doc.body.querySelector( ".waitoverlay_element" ) as HTMLElement;
 		t.is( el.style.animationName, "waitoverlay_animation__pulse" );
 		t.is( el.style.animationDuration, "1s" );
@@ -449,7 +444,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		cls.GetInstance().Show( { image: { animation: { name: "fadein", time: "" } } } );
+		cls.instance.Show( { image: { animation: { name: "fadein", time: "" } } } );
 		const el: HTMLElement = env.doc.body.querySelector( ".waitoverlay_element" ) as HTMLElement;
 		t.is( el.style.animationName, "" );
 	} );
@@ -458,7 +453,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		cls.GetInstance().Show( { image: { animation: { name: "pulse", time: "500" } } } );
+		cls.instance.Show( { image: { animation: { name: "pulse", time: "500" } } } );
 		const el: HTMLElement = env.doc.body.querySelector( ".waitoverlay_element" ) as HTMLElement;
 		t.is( el.style.animationName, "" );
 	} );
@@ -470,7 +465,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		cls.GetInstance().Show( { custom: { enabled: true, value: "<b>hi</b>" }, image: { enabled: false } } );
+		cls.instance.Show( { custom: { enabled: true, value: "<b>hi</b>" }, image: { enabled: false } } );
 		t.truthy( env.doc.body.querySelector( ".waitoverlay_element b" ) );
 	} );
 
@@ -478,7 +473,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		cls.GetInstance().Show( { image: { enabled: false } } );
+		cls.instance.Show( { image: { enabled: false } } );
 		t.is( env.doc.body.querySelectorAll( ".waitoverlay_element" ).length, 0 );
 	} );
 
@@ -489,7 +484,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		const o: WaitOverlayInstance = cls.GetInstance();
+		const o: WaitOverlayOriginal = cls.instance;
 		o.Configure( { background: "red" } );
 		o.Show( { image: { enabled: false } } );
 		t.is( ( env.doc.body.querySelector( ".waitoverlay" ) as HTMLElement ).style.background, "red" );
@@ -499,7 +494,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		const o: WaitOverlayInstance = cls.GetInstance();
+		const o: WaitOverlayOriginal = cls.instance;
 		o.Configure( { fade: [ 1, 2 ] } );
 		o.Show( { image: { enabled: false } } );
 		const el: Nullable<Element> = env.doc.body.querySelector( ".waitoverlay" );
@@ -511,7 +506,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		const o: WaitOverlayInstance = cls.GetInstance();
+		const o: WaitOverlayOriginal = cls.instance;
 		o.Configure( null as unknown as Record<string, unknown> );
 		o.Show( { image: { enabled: false } } );
 		t.truthy( env.doc.body.querySelector( ".waitoverlay" ) );
@@ -524,7 +519,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		cls.GetInstance().Show( { text: { enabled: true, value: "hi" }, image: { enabled: false } } );
+		cls.instance.Show( { text: { enabled: true, value: "hi" }, image: { enabled: false } } );
 		t.is( ( env.doc.body.querySelector( ".waitoverlay_text" ) as Element ).textContent, "hi" );
 	} );
 
@@ -532,7 +527,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		cls.GetInstance().Show( { text: { enabled: true, value: "t", class: "tc" }, image: { enabled: false } } );
+		cls.instance.Show( { text: { enabled: true, value: "t", class: "tc" }, image: { enabled: false } } );
 		t.true( ( env.doc.body.querySelector( ".waitoverlay_text" ) as Element ).classList.contains( "tc" ) );
 	} );
 
@@ -540,7 +535,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		cls.GetInstance().Show( { text: { enabled: true, value: "t", class: "", color: "blue" }, image: { enabled: false } } );
+		cls.instance.Show( { text: { enabled: true, value: "t", class: "", color: "blue" }, image: { enabled: false } } );
 		const el: HTMLElement = env.doc.body.querySelector( ".waitoverlay_text" ) as HTMLElement;
 		t.truthy( el.style.color );
 	} );
@@ -549,7 +544,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		const o: WaitOverlayInstance = cls.GetInstance();
+		const o: WaitOverlayOriginal = cls.instance;
 		o.Show( { text: { enabled: true, value: "a" }, image: { enabled: false } } );
 		o.Text( "b" );
 		t.is( ( env.doc.body.querySelector( ".waitoverlay_text" ) as Element ).textContent, "b" );
@@ -561,7 +556,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		const o: WaitOverlayInstance = cls.GetInstance();
+		const o: WaitOverlayOriginal = cls.instance;
 		o.Text( "x" );
 		t.falsy( env.doc.body.querySelector( ".waitoverlay_text" ) );
 	} );
@@ -570,7 +565,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		const o: WaitOverlayInstance = cls.GetInstance();
+		const o: WaitOverlayOriginal = cls.instance;
 		o.Show( { image: { enabled: false } } );
 		o.Text( "x" );
 		t.falsy( env.doc.body.querySelector( ".waitoverlay_text" ) );
@@ -583,7 +578,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		cls.GetInstance().Show( { progress: { enabled: true }, image: { enabled: false } } );
+		cls.instance.Show( { progress: { enabled: true }, image: { enabled: false } } );
 		t.truthy( env.doc.body.querySelector( ".waitoverlay_progress" ) );
 	} );
 
@@ -591,7 +586,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		cls.GetInstance().Show( { image: { enabled: false } } );
+		cls.instance.Show( { image: { enabled: false } } );
 		t.falsy( env.doc.body.querySelector( ".waitoverlay_progress" ) );
 	} );
 
@@ -599,7 +594,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		cls.GetInstance().Show( { progress: { enabled: true, position: "top", margin: "5px" }, image: { enabled: false } } );
+		cls.instance.Show( { progress: { enabled: true, position: "top", margin: "5px" }, image: { enabled: false } } );
 		t.is( ( env.doc.body.querySelector( ".waitoverlay_progress" ) as HTMLElement ).style.top, "5px" );
 	} );
 
@@ -607,7 +602,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		cls.GetInstance().Show( { progress: { enabled: true, position: "bottom", margin: "5px" }, image: { enabled: false } } );
+		cls.instance.Show( { progress: { enabled: true, position: "bottom", margin: "5px" }, image: { enabled: false } } );
 		const el: HTMLElement = env.doc.body.querySelector( ".waitoverlay_progress" ) as HTMLElement;
 		t.is( el.style.top, "auto" );
 		t.is( el.style.bottom, "5px" );
@@ -617,7 +612,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		cls.GetInstance().Show( { progress: { enabled: true, position: "invalid" as "" | "top" | "bottom", margin: "10px" }, image: { enabled: false } } );
+		cls.instance.Show( { progress: { enabled: true, position: "invalid" as "" | "top" | "bottom", margin: "10px" }, image: { enabled: false } } );
 		const el: HTMLElement = env.doc.body.querySelector( ".waitoverlay_progress" ) as HTMLElement;
 		t.not( el.style.top, "10px" );
 	} );
@@ -626,7 +621,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		cls.GetInstance().Show( { progress: { enabled: true, class: "pc" }, image: { enabled: false } } );
+		cls.instance.Show( { progress: { enabled: true, class: "pc" }, image: { enabled: false } } );
 		t.truthy( env.doc.body.querySelector( ".waitoverlay_progress .pc" ) );
 	} );
 
@@ -634,7 +629,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		cls.GetInstance().Show( { progress: { enabled: true, class: "", color: "red" }, image: { enabled: false } } );
+		cls.instance.Show( { progress: { enabled: true, class: "", color: "red" }, image: { enabled: false } } );
 		const bar: Nullable<Element> = ( env.doc.body.querySelector( ".waitoverlay_progress" ) as Element ).firstElementChild!.firstElementChild;
 		t.truthy( bar );
 		t.is( ( bar as HTMLElement ).style.background, "red" );
@@ -647,7 +642,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		const o: WaitOverlayInstance = cls.GetInstance();
+		const o: WaitOverlayOriginal = cls.instance;
 		o.Show( { progress: { enabled: true }, image: { enabled: false } } );
 		o.Progress( 50 );
 		const bar: Nullable<Element> = ( env.doc.body.querySelector( ".waitoverlay_progress" ) as Element ).firstElementChild!.firstElementChild;
@@ -659,7 +654,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		const o: WaitOverlayInstance = cls.GetInstance();
+		const o: WaitOverlayOriginal = cls.instance;
 		o.Show( { progress: { enabled: true }, image: { enabled: false } } );
 		o.Progress( NaN );
 		const bar: Nullable<Element> = ( env.doc.body.querySelector( ".waitoverlay_progress" ) as Element ).firstElementChild!.firstElementChild;
@@ -671,7 +666,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		const o: WaitOverlayInstance = cls.GetInstance();
+		const o: WaitOverlayOriginal = cls.instance;
 		o.Show( { progress: { enabled: true, min: 10, max: 100 }, image: { enabled: false } } );
 		o.Progress( 5 );
 		const bar: Nullable<Element> = ( env.doc.body.querySelector( ".waitoverlay_progress" ) as Element ).firstElementChild!.firstElementChild;
@@ -682,7 +677,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		const o: WaitOverlayInstance = cls.GetInstance();
+		const o: WaitOverlayOriginal = cls.instance;
 		o.Show( { progress: { enabled: true }, image: { enabled: false } } );
 		o.Progress( 200 );
 		const bar: Nullable<Element> = ( env.doc.body.querySelector( ".waitoverlay_progress" ) as Element ).firstElementChild!.firstElementChild;
@@ -693,7 +688,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		const o: WaitOverlayInstance = cls.GetInstance();
+		const o: WaitOverlayOriginal = cls.instance;
 		o.Show( { progress: { enabled: true, min: 100, max: 0 }, image: { enabled: false } } );
 		o.Progress( 50 );
 		const bar: Nullable<Element> = ( env.doc.body.querySelector( ".waitoverlay_progress" ) as Element ).firstElementChild!.firstElementChild;
@@ -704,7 +699,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		const o: WaitOverlayInstance = cls.GetInstance();
+		const o: WaitOverlayOriginal = cls.instance;
 		o.Show( { progress: { enabled: true }, image: { enabled: false } } );
 		o.Progress( false );
 		const bar: Nullable<Element> = ( env.doc.body.querySelector( ".waitoverlay_progress" ) as Element ).firstElementChild!.firstElementChild;
@@ -715,7 +710,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		const o: WaitOverlayInstance = cls.GetInstance();
+		const o: WaitOverlayOriginal = cls.instance;
 		o.Progress( 50 );
 		t.falsy( env.doc.body.querySelector( ".waitoverlay_progress" ) );
 	} );
@@ -724,7 +719,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		const o: WaitOverlayInstance = cls.GetInstance();
+		const o: WaitOverlayOriginal = cls.instance;
 		o.Show( { image: { enabled: false } } );
 		o.Progress( 50 );
 		t.falsy( env.doc.body.querySelector( ".waitoverlay_progress" ) );
@@ -737,7 +732,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		const o: WaitOverlayInstance = cls.GetInstance();
+		const o: WaitOverlayOriginal = cls.instance;
 		o.Show( { fade: [ 100, 0 ], image: { enabled: false } } );
 		t.true( 0 < env.rafFrames.size, "fade[0]=100 should queue a RAF" );
 		const el: Nullable<Element> = env.doc.body.querySelector( ".waitoverlay" );
@@ -751,7 +746,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		cls.GetInstance().Show( { fade: [ 0, 0 ], image: { enabled: false } } );
+		cls.instance.Show( { fade: [ 0, 0 ], image: { enabled: false } } );
 		t.is( ( env.doc.body.querySelector( ".waitoverlay" ) as HTMLElement ).style.opacity, "1" );
 	} );
 
@@ -762,7 +757,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		cls.GetInstance().Hide();
+		cls.instance.Hide();
 		t.falsy( env.doc.body.querySelector( ".waitoverlay" ) );
 	} );
 
@@ -770,7 +765,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		const o: WaitOverlayInstance = cls.GetInstance();
+		const o: WaitOverlayOriginal = cls.instance;
 		o.Show( { fade: [ 0, 0 ], image: { enabled: false } } );
 		o.Show( { fade: [ 0, 0 ], image: { enabled: false } } );
 		o.Hide();
@@ -781,7 +776,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		const o: WaitOverlayInstance = cls.GetInstance();
+		const o: WaitOverlayOriginal = cls.instance;
 		o.Show( { fade: [ 0, 0 ], image: { enabled: false } } );
 		o.Show( { fade: [ 0, 0 ], image: { enabled: false } } );
 		o.Hide( true );
@@ -792,7 +787,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		const o: WaitOverlayInstance = cls.GetInstance();
+		const o: WaitOverlayOriginal = cls.instance;
 		o.Show( { fade: [ 0, 0 ], image: { enabled: false } } );
 		o.Hide();
 		t.falsy( env.doc.body.querySelector( ".waitoverlay" ) );
@@ -802,7 +797,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		const o: WaitOverlayInstance = cls.GetInstance();
+		const o: WaitOverlayOriginal = cls.instance;
 		o.Show( { fade: [ 0, 100 ], image: { enabled: false } } );
 		o.Hide();
 		const el: Nullable<Element> = env.doc.body.querySelector( ".waitoverlay" );
@@ -815,7 +810,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		const o: WaitOverlayInstance = cls.GetInstance();
+		const o: WaitOverlayOriginal = cls.instance;
 		o.Show( { fade: [ 0, 100 ], image: { enabled: false } } );
 		o.Hide();
 		t.truthy( env.doc.body.querySelector( ".waitoverlay" ), "overlay visible during fade-out" );
@@ -827,7 +822,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		const o: WaitOverlayInstance = cls.GetInstance();
+		const o: WaitOverlayOriginal = cls.instance;
 		o.Show( { fade: [ 0, 0 ], image: { enabled: false } } );
 		o.Hide();
 		t.falsy( env.doc.body.querySelector( ".waitoverlay" ) );
@@ -837,7 +832,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		const o: WaitOverlayInstance = cls.GetInstance();
+		const o: WaitOverlayOriginal = cls.instance;
 		o.Show( { fade: [ 0, 0 ], image: { enabled: false } } );
 		o.Hide();
 		o.Show( { fade: [ 0, 0 ], image: { enabled: false } } );
@@ -851,7 +846,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		cls.GetInstance().Resize();
+		cls.instance.Resize();
 		t.falsy( env.doc.body.querySelector( ".waitoverlay" ) );
 	} );
 
@@ -860,8 +855,8 @@ for( const target of targets ) {
 		_applyEnv( env );
 		_resetEnv( cls, slot );
 		const c: HTMLElement = makeContainer( env.doc, 200, 200 );
-		cls.GetInstance().Show( { image: { enabled: false } }, c );
-		cls.GetInstance().Resize( c );
+		cls.instance.Show( { image: { enabled: false } }, c );
+		cls.instance.Resize( c );
 		t.is( ( c.querySelector( ".waitoverlay" ) as HTMLElement ).style.width, "200px" );
 	} );
 
@@ -870,7 +865,7 @@ for( const target of targets ) {
 		_applyEnv( env );
 		_resetEnv( cls, slot );
 		const c: HTMLElement = makeContainer( env.doc, 0, 0 );
-		cls.GetInstance().Show( { image: { enabled: false } }, c );
+		cls.instance.Show( { image: { enabled: false } }, c );
 		t.is( ( c.querySelector( ".waitoverlay" ) as HTMLElement ).style.display, "none" );
 	} );
 
@@ -879,7 +874,7 @@ for( const target of targets ) {
 		_applyEnv( env );
 		_resetEnv( cls, slot );
 		const c: HTMLElement = makeContainer( env.doc, 200, 200 );
-		cls.GetInstance().Show( { size: { value: 40, units: "px" } }, c );
+		cls.instance.Show( { size: { value: 40, units: "px" } }, c );
 		t.is( ( c.querySelector( ".waitoverlay_element" ) as HTMLElement ).style.width, "40px" );
 	} );
 
@@ -888,8 +883,8 @@ for( const target of targets ) {
 		_applyEnv( env );
 		_resetEnv( cls, slot );
 		const c: HTMLElement = makeContainer( env.doc, 200, 200 );
-		cls.GetInstance().Show( { image: { autoResize: false } }, c );
-		cls.GetInstance().Resize( c );
+		cls.instance.Show( { image: { autoResize: false } }, c );
+		cls.instance.Resize( c );
 		t.truthy( c.querySelector( ".waitoverlay" ) );
 	} );
 
@@ -898,7 +893,7 @@ for( const target of targets ) {
 		_applyEnv( env );
 		_resetEnv( cls, slot );
 		const c: HTMLElement = makeContainer( env.doc, 200, 200 );
-		cls.GetInstance().Show( { size: { value: 0 } }, c );
+		cls.instance.Show( { size: { value: 0 } }, c );
 		const el: Nullable<Element> = c.querySelector( ".waitoverlay_element" );
 		t.truthy( el );
 		t.is( ( el as HTMLElement ).style.width, "" );
@@ -908,7 +903,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		cls.GetInstance().Show( { resize: false, image: { enabled: false } } );
+		cls.instance.Show( { resize: false, image: { enabled: false } } );
 		t.truthy( env.doc.body.querySelector( ".waitoverlay" ) );
 	} );
 
@@ -920,7 +915,7 @@ for( const target of targets ) {
 		_applyEnv( env );
 		_resetEnv( cls, slot );
 		const c: HTMLElement = makeContainer( env.doc, 200, 200 );
-		const o: WaitOverlayInstance = cls.GetInstance();
+		const o: WaitOverlayOriginal = cls.instance;
 		o.Show( { fade: [ 100, 100 ], image: { enabled: false } }, c );
 		o.Destroy( c );
 		t.falsy( c.querySelector( ".waitoverlay" ) );
@@ -930,7 +925,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		cls.GetInstance().Destroy();
+		cls.instance.Destroy();
 		t.falsy( env.doc.body.querySelector( ".waitoverlay" ) );
 	} );
 
@@ -938,7 +933,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		const o: WaitOverlayInstance = cls.GetInstance();
+		const o: WaitOverlayOriginal = cls.instance;
 		o.Show( { fade: [ 100, 0 ], image: { enabled: false } } );
 		t.true( 0 < env.rafFrames.size, "RAF queued after Show" );
 		o.Destroy();
@@ -952,7 +947,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		cls.GetInstance().Show( { image: { enabled: false }, custom: { enabled: false }, text: { enabled: false }, progress: { enabled: false } } );
+		cls.instance.Show( { image: { enabled: false }, custom: { enabled: false }, text: { enabled: false }, progress: { enabled: false } } );
 		t.truthy( env.doc.body.querySelector( ".waitoverlay" ) );
 		t.is( env.doc.body.querySelectorAll( ".waitoverlay_element" ).length, 0 );
 	} );
@@ -961,7 +956,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		const o: WaitOverlayInstance = cls.GetInstance();
+		const o: WaitOverlayOriginal = cls.instance;
 		o.Show( { fade: [ 0, 0 ], image: { enabled: false } } );
 		o.Destroy();
 		o.Hide();
@@ -975,7 +970,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		const o: WaitOverlayInstance = cls.GetInstance();
+		const o: WaitOverlayOriginal = cls.instance;
 		o.Show( { fade: [ 0, 0 ], image: { enabled: false } } );
 		const wm: Nullable<WeakMap<WeakKey, unknown>> = _getWeakMap( o );
 		t.truthy( wm, "should find WeakMap on instance" );
@@ -996,7 +991,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		const o: WaitOverlayInstance = cls.GetInstance();
+		const o: WaitOverlayOriginal = cls.instance;
 		o.Show( { fade: [ 0, 0 ], image: { enabled: false } } );
 		const wm: Nullable<WeakMap<WeakKey, unknown>> = _getWeakMap( o );
 		t.truthy( wm );
@@ -1019,7 +1014,7 @@ for( const target of targets ) {
 		_applyEnv( env );
 		_resetEnv( cls, slot );
 		const c: HTMLElement = makeContainer( env.doc, 100, 100 );
-		cls.GetInstance().Show( {}, c );
+		cls.instance.Show( {}, c );
 		const els: NodeListOf<Element> = c.querySelectorAll( ".waitoverlay_element" );
 		t.true( 0 < els.length );
 		t.is( ( els[ 0 ] as HTMLElement ).dataset.resizefactor, "1" );
@@ -1030,12 +1025,12 @@ for( const target of targets ) {
 		_applyEnv( env );
 		_resetEnv( cls, slot );
 		const c: HTMLElement = makeContainer( env.doc, 200, 200 );
-		cls.GetInstance().Show( {}, c );
+		cls.instance.Show( {}, c );
 		const el: HTMLElement = c.querySelector( ".waitoverlay_element" ) as HTMLElement;
 		t.truthy( el );
 		delete el.dataset.resizefactor;
 		t.falsy( el.dataset.resizefactor, "resizefactor should be gone" );
-		cls.GetInstance().Resize( c );
+		cls.instance.Resize( c );
 		t.truthy( el.style.width );
 	} );
 
@@ -1043,7 +1038,7 @@ for( const target of targets ) {
 		const env: Env = _createEnv();
 		_applyEnv( env );
 		_resetEnv( cls, slot );
-		const o: WaitOverlayInstance = cls.GetInstance();
+		const o: WaitOverlayOriginal = cls.instance;
 		o.Show( { image: { enabled: false } } );
 		const wm: Nullable<WeakMap<WeakKey, unknown>> = _getWeakMap( o );
 		t.truthy( wm );
@@ -1066,7 +1061,7 @@ for( const target of targets ) {
 		_applyEnv( env );
 		_resetEnv( cls, slot );
 		const c: HTMLElement = makeContainer( env.doc, 200, 200 );
-		cls.GetInstance().Show( {
+		cls.instance.Show( {
 			custom: { enabled: true, value: "<span>test</span>" },
 			text: { enabled: true, value: "text" },
 			progress: { enabled: true }

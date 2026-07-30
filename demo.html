@@ -168,9 +168,9 @@
     </div>
 
     <script type="module">
-        import WaitOverlay from 'https://cdn.jsdelivr.net/npm/@stefanobalocco/waitoverlay@latest/WaitOverlay.min.js';
+        import WaitOverlay from 'https://cdn.jsdelivr.net/npm/@stefanobalocco/waitoverlay@latest/dist/WaitOverlay.min.js';
 
-        const overlay = WaitOverlay.GetInstance();
+        const overlay = WaitOverlay.instance;
         const AUTO_HIDE_DELAY = 2500;
         const container = document.getElementById('test-container');
 

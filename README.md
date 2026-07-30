@@ -26,7 +26,7 @@ npm install @stefanobalocco/waitoverlay
 ```js
 import WaitOverlay from '@stefanobalocco/waitoverlay';
 
-const overlay = WaitOverlay.GetInstance();
+const overlay = WaitOverlay.instance;
 overlay.Show( { text: { enabled: true, value: "Loading..." } } );
 // Later...
 overlay.Hide();
@@ -36,9 +36,9 @@ Or include directly via CDN:
 
 ```html
 <script type="module">
-import WaitOverlay from 'https://cdn.jsdelivr.net/npm/@stefanobalocco/waitoverlay@latest/WaitOverlay.min.js';
+import WaitOverlay from 'https://cdn.jsdelivr.net/npm/@stefanobalocco/waitoverlay@latest/dist/WaitOverlay.min.js';
 
-const overlay = WaitOverlay.GetInstance();
+const overlay = WaitOverlay.instance;
 overlay.Show( { text: { enabled: true, value: "Loading..." } } );
 // Later...
 overlay.Hide();
@@ -47,12 +47,12 @@ overlay.Hide();
 
 ## API
 
-### `WaitOverlay.GetInstance()`
+### `WaitOverlay.instance`
 
-Returns the singleton instance. Creates it on first call.
+Returns the singleton instance. Creates it on first access.
 
 ```javascript
-const overlay = WaitOverlay.GetInstance();
+const overlay = WaitOverlay.instance;
 ```
 
 ---
@@ -64,7 +64,7 @@ const overlay = WaitOverlay.GetInstance();
 Shows an overlay for the requested container (defaults to `document.body`). The method merges the supplied `options` with the global defaults; when an overlay is already active for the container, the existing settings continue to apply until the overlay is hidden.
 
 ```javascript
-const overlay = WaitOverlay.GetInstance();
+const overlay = WaitOverlay.instance;
 overlay.Show( { text: { enabled: true, value: "Loading..." } } );
 const el = document.getElementById( "my-form" );
 overlay.Show( { text: { enabled: true, value: "Saving..." } }, el );
@@ -78,7 +78,7 @@ overlay.Show( { text: { enabled: true, value: "Saving..." } }, el );
 Decrements the reference count for the target container. The overlay is removed when the counter reaches zero or when `force` is `true`. The first argument is the force flag so that calls like `overlay.Hide( false, el )` work intuitively.
 
 ```javascript
-const overlay = WaitOverlay.GetInstance();
+const overlay = WaitOverlay.instance;
 overlay.Hide();
 const el = document.getElementById( "my-form" );
 overlay.Hide( false, el );
@@ -93,7 +93,7 @@ overlay.Hide( true );
 Recomputes sizes and positions for the overlay associated with `container`.
 
 ```javascript
-const overlay = WaitOverlay.GetInstance();
+const overlay = WaitOverlay.instance;
 overlay.Resize();
 ```
 
@@ -104,7 +104,7 @@ overlay.Resize();
 Updates the textual label, or hides it.
 
 ```javascript
-const overlay = WaitOverlay.GetInstance();
+const overlay = WaitOverlay.instance;
 overlay.Text( "Almost done..." );
 overlay.Text( false );
 ```
@@ -119,7 +119,7 @@ overlay.Text( false );
 Adjusts the progress bar value or hides it.
 
 ```javascript
-const overlay = WaitOverlay.GetInstance();
+const overlay = WaitOverlay.instance;
 overlay.Progress( 50 );
 overlay.Progress( false );
 ```
@@ -134,7 +134,7 @@ overlay.Progress( false );
 Cancels pending animation frames and timeouts, disconnects the ResizeObserver, removes the overlay from the DOM, and forgets the cached state for the container.
 
 ```javascript
-const overlay = WaitOverlay.GetInstance();
+const overlay = WaitOverlay.instance;
 overlay.Destroy();
 ```
 
@@ -145,7 +145,7 @@ overlay.Destroy();
 Sets global default overrides that are merged before building overlays in future `Show` calls.
 
 ```javascript
-const overlay = WaitOverlay.GetInstance();
+const overlay = WaitOverlay.instance;
 overlay.Configure( {
     background: "rgba(0, 0, 0, 0.7)",
     image: { color: { fill: "#ffffff" } },
@@ -270,7 +270,7 @@ Invalid animation names are silently reset to an empty string.
     <script type="module">
         import WaitOverlay from './WaitOverlay.min.js';
 
-        const overlay = WaitOverlay.GetInstance();
+        const overlay = WaitOverlay.instance;
 
         // Show whole-page overlay with text
         overlay.Show( { text: { enabled: true, value: "Loading page..." } } );

@@ -5,8 +5,8 @@
     "target": "esnext",
     "module": "esnext",
     "moduleResolution": "bundler",
-    "sourceMap": true,
-    "declaration": true,
+    "sourceMap": false,
+    "declaration": false,
     "removeComments": true,
     "strict": true,
     "noImplicitAny": true,
@@ -20,6 +20,6 @@
     "allowSyntheticDefaultImports": true
   },
   "files": [
-    "src/WaitOverlay.ts"
+    "src/WaitOverlay.test.ts"
   ]
 }

@@ -76,7 +76,7 @@ export default class WaitOverlay {
     private static readonly _validProgressPositions;
     private static readonly _css;
     private static _instance;
-    static GetInstance(): WaitOverlay;
+    static get instance(): WaitOverlay;
     private readonly _states;
     private _settings;
     private constructor();
